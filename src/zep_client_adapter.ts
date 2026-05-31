@@ -9,6 +9,8 @@ import type {
   ZepGraph,
   ZepGraphClient,
   ZepGraphCreateRequest,
+  ZepGraphGetEpisodesRequest,
+  ZepGraphGetEpisodesResponse,
   ZepGraphListAllRequest,
   ZepGraphListResponse,
   ZepGraphSearchRequest,
@@ -44,6 +46,18 @@ export function createZepGraphClient(opts: ZepAdapterOptions): ZepGraphClient {
     },
     async delete(graphId: string): Promise<unknown> {
       return await client.graph.delete(graphId);
+    },
+    async getEpisodes(
+      graphId: string,
+      req?: ZepGraphGetEpisodesRequest,
+    ): Promise<ZepGraphGetEpisodesResponse> {
+      // Zep exposes most-recent episode listing via `graph.episode.getByGraphId`.
+      // `lastn` is the only paging knob (no true offset). Plugin handler uses
+      // this for exhaustive scans bounded by `MEMORY_GET_MAX_SCAN`.
+      const res = (await client.graph.episode.getByGraphId(graphId, {
+        ...(typeof req?.lastn === 'number' ? { lastn: req.lastn } : {}),
+      })) as ZepGraphGetEpisodesResponse;
+      return res;
     },
   };
 }

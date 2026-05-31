@@ -66,6 +66,15 @@ export interface ZepGraphListResponse {
   totalCount?: number;
 }
 
+export interface ZepGraphGetEpisodesRequest {
+  /** Most-recent N episodes to retrieve. Mirrors Zep `graph.episode.getByGraphId` `lastn`. */
+  lastn?: number;
+}
+
+export interface ZepGraphGetEpisodesResponse {
+  episodes?: ZepEpisode[];
+}
+
 /**
  * Minimal interface the memory plugin needs from a Zep client. Both the real
  * `@getzep/zep-cloud` SDK and the test stubs implement this. Field names are
@@ -77,6 +86,15 @@ export interface ZepGraphClient {
   search(request: ZepGraphSearchRequest): Promise<ZepGraphSearchResults>;
   listAll(request?: ZepGraphListAllRequest): Promise<ZepGraphListResponse>;
   delete(graphId: string): Promise<unknown>;
+  /**
+   * Exhaustive episode listing for `memory/get` fallback scans and
+   * `list_scopes` scope-metadata reconstruction. Returns most-recent N
+   * episodes per Zep `graph.episode.getByGraphId({ graphId, lastn })`.
+   */
+  getEpisodes(
+    graphId: string,
+    request?: ZepGraphGetEpisodesRequest,
+  ): Promise<ZepGraphGetEpisodesResponse>;
 }
 
 /**

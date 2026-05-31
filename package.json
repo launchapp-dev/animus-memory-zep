@@ -1,6 +1,6 @@
 {
   "name": "@launchapp-dev/animus-memory-zep",
-  "version": "0.1.0-dev",
+  "version": "0.1.0",
   "description": "Animus v0.5 memory_store plugin backed by Zep Cloud.",
   "license": "Elastic-2.0",
   "type": "module",

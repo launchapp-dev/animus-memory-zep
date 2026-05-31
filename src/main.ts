@@ -16,7 +16,7 @@ import { createServer, buildManifest } from './server.js';
 import { createZepGraphClient } from './zep_client_adapter.js';
 
 const NAME = '@launchapp-dev/animus-memory-zep';
-const VERSION = '0.1.0-dev';
+const VERSION = '0.1.0';
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);

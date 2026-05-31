@@ -9,6 +9,8 @@ import type {
   ZepGraph,
   ZepGraphClient,
   ZepGraphCreateRequest,
+  ZepGraphGetEpisodesRequest,
+  ZepGraphGetEpisodesResponse,
   ZepGraphListAllRequest,
   ZepGraphListResponse,
   ZepGraphSearchRequest,
@@ -29,6 +31,7 @@ export class StubZepClient implements ZepGraphClient {
   searchCalls: ZepGraphSearchRequest[] = [];
   listAllCalls: (ZepGraphListAllRequest | undefined)[] = [];
   deleteCalls: string[] = [];
+  getEpisodesCalls: { graphId: string; request?: ZepGraphGetEpisodesRequest }[] = [];
   episodeCounter = 0;
   /** If set, `add` returns the next pre-seeded edge from this list for `search` calls. */
   preseededEdges: ZepEntityEdge[] = [];
@@ -68,8 +71,11 @@ export class StubZepClient implements ZepGraphClient {
     const g = this.graphs.get(request.graphId);
     if (!g) throw makeStatusError(404, `graph not found: ${request.graphId}`);
     if (request.scope === 'episodes') {
-      // Return all episodes in the graph; handler filters by metadata.key.
-      return { episodes: g.episodes };
+      // Mirror Zep's behavior: cap returned episodes at the requested limit
+      // (Zep's search has a hard cap of 50). Returns in insertion order; the
+      // handler post-filters by metadata.key.
+      const cap = typeof request.limit === 'number' ? request.limit : g.episodes.length;
+      return { episodes: g.episodes.slice(0, cap) };
     }
     if (request.scope === 'edges') {
       // Edges-shaped result. Tests pre-seed this list.
@@ -101,6 +107,22 @@ export class StubZepClient implements ZepGraphClient {
       throw makeStatusError(404, `graph not found: ${graphId}`);
     }
     return { success: true };
+  }
+
+  async getEpisodes(
+    graphId: string,
+    request?: ZepGraphGetEpisodesRequest,
+  ): Promise<ZepGraphGetEpisodesResponse> {
+    this.getEpisodesCalls.push({ graphId, request });
+    const g = this.graphs.get(graphId);
+    if (!g) throw makeStatusError(404, `graph not found: ${graphId}`);
+    const lastn = typeof request?.lastn === 'number' && request.lastn > 0
+      ? request.lastn
+      : g.episodes.length;
+    // Zep returns the most-recent N episodes; our stub stores in append order
+    // so the tail is most-recent. Take the last N.
+    const start = Math.max(0, g.episodes.length - lastn);
+    return { episodes: g.episodes.slice(start) };
   }
 }
 

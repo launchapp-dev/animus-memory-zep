@@ -292,6 +292,68 @@ describe('MemoryStoreHandler.deleteScope', () => {
   });
 });
 
+describe('MemoryStoreHandler.listScopes — un-normalized scope round-trip (Issue #2)', () => {
+  let stub: StubZepClient;
+  let handler: MemoryStoreHandler;
+  beforeEach(() => {
+    stub = new StubZepClient();
+    handler = new MemoryStoreHandler({ client: stub });
+  });
+
+  it('preserves agent_id containing the `__` delimiter via metadata fallback', async () => {
+    // `a__b` is already lowercase + matches [a-z0-9_-], so normalize() leaves
+    // it untouched. The resulting graphId `proj_p__agent_a__b` is ambiguous
+    // when split by `__`, so the structural parser would return null and
+    // silently omit this scope. The metadata-based reconstruction must
+    // recover the original `agent_id` verbatim.
+    await handler.put({
+      scope: { project_id: 'p', agent_id: 'a__b' },
+      key: 'k',
+      value: 'v',
+    });
+
+    const out = await handler.listScopes({});
+    expect(out.scopes).toHaveLength(1);
+    expect(out.scopes[0]).toEqual({ project_id: 'p', agent_id: 'a__b' });
+  });
+});
+
+describe('MemoryStoreHandler.get — exhaustive scan fallback (Issue #1)', () => {
+  let stub: StubZepClient;
+  let handler: MemoryStoreHandler;
+  beforeEach(() => {
+    stub = new StubZepClient();
+    handler = new MemoryStoreHandler({ client: stub });
+  });
+
+  it('finds an exact-key match buried past the Zep search hard cap (50)', async () => {
+    // Seed 60 episodes with distinct keys; target is the 55th (1-based) =
+    // index 54. Zep's search caps results at 50, so the initial bounded
+    // search misses k54 entirely. The handler must fall back to a
+    // most-recent-N episode scan to recover it.
+    for (let i = 0; i < 60; i++) {
+      await handler.put({
+        scope: { project_id: 'p' },
+        key: `k${i}`,
+        value: { idx: i },
+      });
+    }
+
+    const out = await handler.get({ scope: { project_id: 'p' }, key: 'k54' });
+    expect(out.found).toBe(true);
+    expect(out.value).toEqual({ idx: 54 });
+
+    // Confirm the fallback path was actually exercised (search hit the cap
+    // first, then getEpisodes was called).
+    expect(stub.searchCalls.at(-1)?.scope).toBe('episodes');
+    expect(stub.searchCalls.at(-1)?.limit).toBe(50);
+    expect(stub.getEpisodesCalls.length).toBeGreaterThan(0);
+    const last = stub.getEpisodesCalls.at(-1)!;
+    expect(last.graphId).toBe('proj_p');
+    expect(last.request?.lastn).toBeGreaterThanOrEqual(60);
+  });
+});
+
 describe('scopeFromGraphId', () => {
   it('round-trips project-only graphId', () => {
     expect(scopeFromGraphId('proj_p')).toEqual({ project_id: 'p' });
