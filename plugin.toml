@@ -1,0 +1,58 @@
+# Static plugin metadata for animus-memory-zep.
+#
+# Animus's primary discovery surface is the executable's `--manifest`
+# JSON output (see `node dist/main.js --manifest`). This file mirrors
+# the `PluginManifest` wire shape from `animus-plugin-protocol` so
+# static tooling (`animus plugin info`, CI lint, the public plugin
+# registry) can read the manifest without spawning the binary.
+#
+# This plugin is distributed as an npm package
+# (`@launchapp-dev/animus-memory-zep`). Install via:
+#
+#   npm install -g @launchapp-dev/animus-memory-zep
+#
+# The daemon launches the plugin with the `animus-memory-zep` shim
+# (the npm `bin` entry), which wraps `node dist/main.js`.
+
+name             = "animus-memory-zep"
+version          = "0.1.0"
+plugin_kind      = "memory_store"
+description      = "Animus v0.5 memory_store plugin backed by Zep Cloud."
+protocol_version = "1.1.0"
+
+# Methods implemented by the plugin (mirrors PluginManifest.capabilities,
+# which is a flat list of RPC method names).
+capabilities = [
+  "initialize",
+  "$/ping",
+  "health/check",
+  "shutdown",
+  "exit",
+  "memory/put",
+  "memory/get",
+  "memory/query",
+  "memory/list_scopes",
+  "memory/delete_scope",
+]
+
+# Environment variables the plugin needs the host to forward at spawn
+# time. The plugin host clears the daemon's environment before spawn
+# and only forwards a minimal universal shell allowlist (PATH, HOME,
+# TMPDIR, LANG, LC_ALL, RUST_LOG, RUST_BACKTRACE, TZ) plus anything
+# declared here.
+
+[[env_required]]
+name        = "ZEP_API_KEY"
+description = "Zep Cloud API key. Required at runtime."
+required    = true
+sensitive   = true
+
+[[env_required]]
+name        = "ZEP_BASE_URL"
+description = "Override the Zep Cloud base URL (BYOC / self-hosted deployments). Optional."
+required    = false
+
+[[env_required]]
+name        = "MEMORY_GET_MAX_SCAN"
+description = "Upper bound on episodes scanned by the memory/get exhaustive-fallback path. Default 500."
+required    = false

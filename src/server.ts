@@ -57,40 +57,48 @@ interface ServerState {
 }
 
 export function buildManifest(name: string, version: string): Record<string, unknown> {
+  // Mirrors the `PluginManifest` wire shape from `animus-plugin-protocol`.
+  // `capabilities` is a flat list of RPC method names (PluginManifest
+  // .capabilities: Vec<String>), NOT a nested object. Streaming /
+  // progress / cancellation flags belong on the `initialize` response's
+  // `capabilities.<kind>` object, not on the static manifest.
   return {
     name,
     version,
-    description: 'Animus v0.5 memory_store plugin backed by Zep Cloud.',
     plugin_kind: 'memory_store',
-    capabilities: {
-      methods: [
-        'initialize',
-        '$/ping',
-        'health/check',
-        'shutdown',
-        'exit',
-        METHOD_MEMORY_PUT,
-        METHOD_MEMORY_GET,
-        METHOD_MEMORY_QUERY,
-        METHOD_MEMORY_LIST_SCOPES,
-        METHOD_MEMORY_DELETE_SCOPE,
-      ],
-      streaming: false,
-      progress: false,
-      cancellation: false,
-    },
+    description: 'Animus v0.5 memory_store plugin backed by Zep Cloud.',
+    protocol_version: PROTOCOL_VERSION,
+    capabilities: [
+      'initialize',
+      '$/ping',
+      'health/check',
+      'shutdown',
+      'exit',
+      METHOD_MEMORY_PUT,
+      METHOD_MEMORY_GET,
+      METHOD_MEMORY_QUERY,
+      METHOD_MEMORY_LIST_SCOPES,
+      METHOD_MEMORY_DELETE_SCOPE,
+    ],
     env_required: [
       {
         name: 'ZEP_API_KEY',
         description: 'API key for Zep Cloud. Required at runtime.',
         required: true,
-        secret: true,
+        sensitive: true,
       },
       {
         name: 'ZEP_BASE_URL',
         description: 'Override the Zep Cloud base URL (BYOC). Optional.',
         required: false,
-        secret: false,
+        sensitive: false,
+      },
+      {
+        name: 'MEMORY_GET_MAX_SCAN',
+        description:
+          'Upper bound on episodes scanned by the memory/get exhaustive-fallback path. Default 500.',
+        required: false,
+        sensitive: false,
       },
     ],
   };

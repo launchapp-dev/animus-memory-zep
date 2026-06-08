@@ -15,7 +15,11 @@ import process from 'node:process';
 import { createServer, buildManifest } from './server.js';
 import { createZepGraphClient } from './zep_client_adapter.js';
 
-const NAME = '@launchapp-dev/animus-memory-zep';
+// Plugin identity advertised over the JSON-RPC manifest. Matches
+// `plugin.toml`'s `name = "animus-memory-zep"` (Animus discovers and
+// records plugins by this bare identifier, not the scoped npm package
+// name).
+const NAME = 'animus-memory-zep';
 const VERSION = '0.1.0';
 
 async function main(): Promise<void> {

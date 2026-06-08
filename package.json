@@ -13,6 +13,7 @@
   "files": [
     "dist",
     "src",
+    "plugin.toml",
     "README.md",
     "LICENSE"
   ],
